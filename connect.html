@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<!--[if lt IE 9]>
+		<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
+		<style>
+			.full-circle {
+				background-color: #cc0066;
+				height: 15px;
+				-moz-border-radius: 75px;
+				-webkit-border-radius: 75px;
+				width: 15px;
+				position: absolute;
+			}
+		</style>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+	</head>
+	<body>
+		<img src="http://dotnetdemos.cimex.com/timoffline/victoria.gif" width="1600"/>
+		<script src="http://localhost:4000/socket.io/socket.io.js"></script>
+		<script src="http://localhost:4000/mapping.js"></script>
+		<script src="http://dotnetdemos.cimex.com/timoffline/jquery.pulse.js"></script>
+		<script>
+			var socket = io.connect();
+			// TIP: .connect with no args does auto-discovery
+			socket.on('connect', function() {// TIP: you can avoid listening on `connect` and listen on events directly too!
+				console.log('msg');
+
+			});
+			socket.on('message', function(msg) {
+				console.log(msg.result);
+				$('.full-circle').remove();
+				$.each(msg.south, function(index, value) {
+					if(victoria_south[value]) {
+						var position = victoria_south[value];
+						$('body').append('<div class="full-circle" style="top:200px;left:' + (65 + (position * 25)) + 'px;">');
+					} else {
+						console.log('value not supported: ' + value);
+					}
+				});
+
+				$('.full-circle').pulse({
+					opacity : [1, 0.2]
+				}, 1000, 100);
+			});
+
+		</script>
+	</body>
+</html>
