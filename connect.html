@@ -16,6 +16,9 @@
 			}
 		</style>
 		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+		<link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
+		<script src="http://twitter.github.com/bootstrap/1.4.0/bootstrap-twipsy.js"></script>
+		
 	</head>
 	<body>
 		<img src="http://dotnetdemos.cimex.com/timoffline/victoria.gif" width="1600"/>
@@ -26,24 +29,35 @@
 			var socket = io.connect();
 			// TIP: .connect with no args does auto-discovery
 			socket.on('connect', function() {// TIP: you can avoid listening on `connect` and listen on events directly too!
-				console.log('msg');
+				console.log('initiated');
 
 			});
 			socket.on('message', function(msg) {
-				console.log(msg.result);
-				$('.full-circle').remove();
-				$.each(msg.south, function(index, value) {
-					if(victoria_south[value]) {
-						var position = victoria_south[value];
-						$('body').append('<div class="full-circle" style="top:200px;left:' + (65 + (position * 25)) + 'px;">');
-					} else {
-						console.log('value not supported: ' + value);
+				//console.log(msg);
+				$('.twipsy').remove();
+				$('.train').remove();
+				$.each(msg, function(index, value) {
+					if(!value.isNorth) {
+						if(victoria_south[value.location]) {
+							var position = victoria_south[value.location];
+							var info = 'Location: '+ value.location+'<br/>TTS: '+value.tts;							
+						//	$('body').append('<div class="twipsy fade above in" style="display: block; top: 166px; left:' + (65 + (position * 25)-39) + 'px"><div class="twipsy-arrow"></div><div class="twipsy-inner">'+info+'</div></div>');
+							$('body').append('<a class="train" data-placement="above" style="position:absolute;top:200px;left:' + (65 + (position * 25)-28) + 'px;" title="'+info+'"><div class="full-circle" style="top:0px;left:-7px;">&nbsp;</div></a>');
+						} else {
+							console.log('value not supported: ' + value.location);
+						}
+					}else{
+						if(victoria_south[value.location]) {
+							var position = victoria_south[value.location];
+							var info = 'Location: '+ value.location+'<br/>TTS: '+value.tts;							
+						//	$('body').append('<div class="twipsy fade above in" style="display: block; top: 166px; left:' + (65 + (position * 25)-39) + 'px"><div class="twipsy-arrow"></div><div class="twipsy-inner">'+info+'</div></div>');
+							$('body').append('<a class="train" data-placement="below" style="position:absolute;top:300px;left:' + (65 + (position * 25)-28) + 'px;" title="'+info+'"><div class="full-circle" style="top:-20px;left:-7px;">&nbsp;</div></a>');
+						} else {
+							console.log('value not supported: ' + value.location);
+						}
 					}
 				});
-
-				$('.full-circle').pulse({
-					opacity : [1, 0.2]
-				}, 1000, 100);
+				$('.train').twipsy({html:'true'});
 			});
 
 		</script>
