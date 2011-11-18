@@ -1,65 +1,76 @@
-var sys = require('util');
-var http = require('http');
-var XMLHttpRequest = require("XMLHttpRequest").XMLHttpRequest;
-var xhr = new XMLHttpRequest();
-var sax = require("./sax"), strict = false, // set to false for html-mode
-parser = sax.parser(strict, {
-	normalize : true,
-	trim : true,
-	xmlns : true
-});
-var north = [], south = [];
-var currentDirection = "Ignore";
-var parseresult = "";
-parser.onattribute = function(attribute) {
-	if(parser.tag.name === "P") {
-		if(attribute.name === "N") {
-			if(attribute.value.indexOf("Northbound") != -1) {
-				currentDirection = "North";
-			} else if(attribute.value.indexOf("Southbound") != -1) {
-				currentDirection = "South";
-			} else {
-				currentDirection = "Ignore";
-			}
-		}
-	} else if(parser.tag.name === "T") {
+var sys = require('util'), http = require('http'), datejs = require('datejs');
+var XMLHttpRequest = require("XMLHttpRequest").XMLHttpRequest, xhr = new XMLHttpRequest();
+var xml2js = require('xml2js'), parser = new xml2js.Parser();
+var north= new Array( ), south =  new Array( );
 
-		if(attribute.name === "L") {
-			if(currentDirection === "North") {
-
-				if(north.indexOf(attribute.value) < 0) {
-					north.push(attribute.value);
-				}
-			} else if(currentDirection === "South") {
-				if(south.indexOf(attribute.value) < 0) {
-					south.push(attribute.value);
-				}
-			} else {
-				return;
-			}
-		}
-
-	}
+var getMMSSInSeconds = function(timeString) {
+	var time = Date.parse('January 1, 1970 00:' + timeString);
+	return (time) ? Date.parse('January 1, 1970 00:' + timeString).getTime() / 1000 : false;
 }
+
 xhr.onreadystatechange = function() {
 
 	if(this.readyState == 4) {
 		//	parser.write(this.responseText).end();
 
-		var xml2js = require('xml2js');
-		var parser = new xml2js.Parser();
-
 		parser.addListener('end', function(result) {
-			
 			for(var sCounter = 0; sCounter < result.S.length; sCounter++) {
-				
 				for(var pCounter = 0; pCounter < result.S[sCounter].P.length; pCounter++) {
-					console.log(result.S[sCounter].P[pCounter]['@'].N);
+
+					var isNorth = (result.S[sCounter].P[pCounter]['@'].N.indexOf("Northbound") != -1);
+					if(result.S[sCounter].P[pCounter].T) {
+						for(var tCounter = 0; tCounter < result.S[sCounter].P[pCounter].T.length; tCounter++) {
+							var trainLocation = result.S[sCounter].P[pCounter].T[tCounter]['@'].L;
+
+							if(isNorth) {
+
+								if(north[trainLocation]) {
+									if(getMMSSInSeconds(result.S[sCounter].P[pCounter].T[tCounter]['@'].C)) {//if time to station is valid
+										if(getMMSSInSeconds(result.S[sCounter].P[pCounter].T[tCounter]['@'].C) < north[trainLocation]) {//if this tts is less than stored tts
+											north[trainLocation] = getMMSSInSeconds(result.S[sCounter].P[pCounter].T[tCounter]['@'].C);
+											//store this tts
+										}
+									} else {
+										north[trainLocation] = 0;
+										//is tts is invalid then its already at a station effectively meaning tts is 0
+									}
+								} else {
+									north[trainLocation] = getMMSSInSeconds(result.S[sCounter].P[pCounter].T[tCounter]['@'].C);
+								}
+
+							} else {//TODO: I hate this, must be a way to use some kind of reflection for this
+								
+								if(south[trainLocation]) {
+								
+									if(getMMSSInSeconds(result.S[sCounter].P[pCounter].T[tCounter]['@'].C)) {//if time to station is valid
+										if(getMMSSInSeconds(result.S[sCounter].P[pCounter].T[tCounter]['@'].C) < south[trainLocation]) {//if this tts is less than stored tts
+											south[trainLocation] = getMMSSInSeconds(result.S[sCounter].P[pCounter].T[tCounter]['@'].C);
+											//store this tts
+										}
+									} else {
+										
+										south[trainLocation] = 0;
+										//is tts is invalid then its already at a station effectively meaning tts is 0
+									}
+								} else {
+									south[trainLocation] = getMMSSInSeconds(result.S[sCounter].P[pCounter].T[tCounter]['@'].C);
+								}
+
+							}
+						}
+					}
 				}
 			}
+			console.log(north);
+			console.log(south);
 		});
-
-		parser.parseString(this.responseText.replace(/^\uFEFF/, ''));
+		try {
+			parser.parseString(this.responseText.replace(/^\uFEFF/, ''));
+			
+			
+		} catch(err) {
+			throw err;
+		}
 	}
 
 };
